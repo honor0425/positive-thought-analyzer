@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>自動化思考分析器</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 2em; background: #f0f4f8; }
+    textarea, input[type="date"], input[type="text"], input[type="range"] { width: 100%; padding: 10px; font-size: 1em; margin-bottom: 1em; }
+    button { padding: 10px 20px; margin-top: 1em; font-size: 1em; }
+    #output, #history, #moodChartContainer { margin-top: 2em; background: #fff; padding: 1em; border-radius: 10px; }
+    #history { margin-top: 3em; }
+    .entry { margin-bottom: 1.5em; border-bottom: 1px dashed #ccc; padding-bottom: 1em; }
+    #moodValueDisplay { font-weight: bold; text-align: center; margin-bottom: 1em; }
+    #loginStatus { margin-top: 1em; text-align: center; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>🧠 自動化思考分析器</h1>
+  <button onclick="loginWithGoogle()">🔐 使用 Google 登入</button>
+  <div id="loginStatus"></div>
+  <p>請選擇日期與輸入你今天的想法：</p>
+  <input type="date" id="inputDate" />
+  <textarea id="inputThought" placeholder="例如：我今天在報告時結巴了，覺得大家覺得我很差..."></textarea>
+  <label for="moodRange">今日心情溫度計（0-10）：</label>
+  <input type="range" id="moodRange" min="0" max="10" step="1" value="5" oninput="document.getElementById('moodValueDisplay').innerText = `心情分數：${this.value}`">
+  <div id="moodValueDisplay">心情分數：5</div>
+  <button onclick="analyzeThought()">分析我的想法</button>
+  <button onclick="exportHistory()">📁 匯出文字紀錄</button>
+  <button onclick="exportExcel()">📊 匯出 Excel</button>
+
+  <div id="output"></div>
+
+  <div id="history">
+    <h2>🗂️ 歷史紀錄</h2>
+    <input type="text" id="searchInput" placeholder="🔍 搜尋歷史紀錄..." oninput="filterHistory()">
+    <div id="historyEntries"></div>
+  </div>
+
+  <div id="moodChartContainer">
+    <h2>📈 心情變化圖表</h2>
+    <canvas id="moodChart"></canvas>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBxnh_QK6r-luS3yMOfEsv3LLZaW8GPrbU",
+      authDomain: "cbt-thinking.firebaseapp.com",
+      projectId: "cbt-thinking",
+      appId: "637682778759"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    function loginWithGoogle() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider)
+        .then(result => {
+          const user = result.user;
+          document.getElementById("loginStatus").innerText = `👋 歡迎 ${user.displayName}`;
+          loadUserEntries(user.uid);
+        })
+        .catch(error => {
+          document.getElementById("loginStatus").innerText = "❌ 登入失敗";
+          console.error("登入失敗", error);
+        });
+    }
+
+    let allEntries = [];
+    let moodChart;
+
+    function analyzeThought() {
+      const date = document.getElementById("inputDate").value;
+      const thought = document.getElementById("inputThought").value;
+      const mood = document.getElementById("moodRange").value;
+      const outputDiv = document.getElementById("output");
+
+      let mockResult = `
+        <h2>分析結果</h2>
+        <p><strong>事件：</strong>你在報告時結巴了</p>
+        <p><strong>情緒：</strong>羞愧、不安</p>
+        <p><strong>自動化思考：</strong>大家一定覺得我很沒用</p>
+        <p><strong>認知謬誤：</strong>讀心術、災難化</p>
+        <p><strong>建議性的反思：</strong>即使我表現不完美，這也不代表我沒用，別人可能理解我只是緊張。</p>
+        <p><strong>替代性思考：</strong>我可以下次提前練習報告，讓自己更有信心，這次的經驗讓我知道要更準備。</p>
+      `;
+
+      const time = new Date().toLocaleTimeString();
+      const fullDate = date ? date : new Date().toLocaleDateString();
+      const fullTimestamp = `${fullDate} ${time}`;
+
+      outputDiv.innerHTML = mockResult;
+
+      const entry = { date: fullTimestamp, thought, mood: parseInt(mood), html: mockResult };
+      allEntries.push(entry);
+      displayHistory();
+      updateMoodChart();
+
+      document.getElementById("inputThought").value = "";
+
+      if (auth.currentUser) {
+        db.collection("entries").add({
+          uid: auth.currentUser.uid,
+          date: fullTimestamp,
+          thought: thought,
+          mood: parseInt(mood),
+          result: mockResult
+        });
+      }
+    }
+
+    function loadUserEntries(uid) {
+      db.collection("entries")
+        .where("uid", "==", uid)
+        .orderBy("date")
+        .get()
+        .then(snapshot => {
+          allEntries = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              date: data.date,
+              thought: data.thought,
+              mood: data.mood,
+              html: data.result
+            };
+          });
+          displayHistory();
+          updateMoodChart();
+        });
+    }
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        document.getElementById("loginStatus").innerText = `👋 歡迎 ${user.displayName}`;
+        loadUserEntries(user.uid);
+      }
+    });
+  </script>
+</body>
+</html>
