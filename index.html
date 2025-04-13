@@ -99,6 +99,103 @@
 
       recognition.start();
     };
+
+    // 登入功能
+    window.loginWithGoogle = function () {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider)
+        .then((result) => {
+          document.getElementById("loginStatus").innerText = `👋 哈囉，${result.user.displayName}`;
+          loadHistory();
+        })
+        .catch((error) => {
+          document.getElementById("loginStatus").innerText = `❌ 登入失敗：${error.message}`;
+        });
+    };
+
+    // 分析想法功能
+    window.analyzeThought = function () {
+      const thought = document.getElementById("inputThought").value.trim();
+      const date = document.getElementById("inputDate").value;
+      const mood = document.getElementById("moodRange").value;
+      const outputDiv = document.getElementById("output");
+
+      if (!thought) {
+        outputDiv.innerText = "⚠️ 請先輸入你的想法再進行分析。";
+        return;
+      }
+
+      const prompt = `你是一位認知行為取向的資深心理師，以下是我今天的想法：「${thought}」。請用認知行為取向的觀點分析這段想法，找出自動化思考、認知陷阱，並提供正向的替代想法。請使用繁體中文回答。`;
+
+      outputDiv.innerText = "⏳ 正在分析中，請稍候...";
+
+      fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer YOUR_OPENAI_API_KEY"
+        },
+        body: JSON.stringify({
+          model: "gpt-3.5-turbo",
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.7
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        const result = data.choices?.[0]?.message?.content;
+        outputDiv.innerText = result || "⚠️ 無法取得分析結果，請稍後再試。";
+
+        if (result) {
+          const user = auth.currentUser;
+          const uid = user ? user.uid : "anonymous";
+
+          db.collection("thoughts").add({
+            uid,
+            date,
+            thought,
+            mood: parseInt(mood),
+            analysis: result,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+          }).then(() => {
+            console.log("✅ 已儲存分析結果到 Firebase");
+            loadHistory();
+          }).catch(err => {
+            console.error("❌ 儲存失敗", err);
+          });
+        }
+      })
+      .catch(err => {
+        outputDiv.innerText = `❌ 分析失敗：${err.message}`;
+      });
+    };
+
+    function loadHistory() {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      db.collection("thoughts")
+        .where("uid", "==", user.uid)
+        .orderBy("timestamp", "desc")
+        .get()
+        .then(snapshot => {
+          const container = document.getElementById("historyEntries");
+          container.innerHTML = "";
+
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            const entry = document.createElement("div");
+            entry.className = "entry";
+            entry.innerHTML = `
+              <div><strong>🗓️ ${data.date}</strong></div>
+              <div><strong>📝 想法：</strong>${data.thought}</div>
+              <div><strong>📊 心情分數：</strong>${data.mood}</div>
+              <div><strong>🧠 分析結果：</strong><pre>${data.analysis}</pre></div>
+            `;
+            container.appendChild(entry);
+          });
+        });
+    }
   </script>
 </body>
 </html>
