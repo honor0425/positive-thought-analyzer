@@ -61,16 +61,23 @@
     function loginWithGoogle() {
       const provider = new firebase.auth.GoogleAuthProvider();
       auth.signInWithPopup(provider)
-        .then(result => {
+        .then((result) => {
           const user = result.user;
           document.getElementById("loginStatus").innerText = `👋 歡迎 ${user.displayName}`;
           loadUserEntries(user.uid);
         })
-        .catch(error => {
-          document.getElementById("loginStatus").innerText = "❌ 登入失敗";
+        .catch((error) => {
           console.error("登入失敗", error);
+          document.getElementById("loginStatus").innerText = "❌ 登入失敗";
         });
     }
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        document.getElementById("loginStatus").innerText = `👋 歡迎 ${user.displayName}`;
+        loadUserEntries(user.uid);
+      }
+    });
 
     let allEntries = [];
     let moodChart;
@@ -134,13 +141,6 @@
           updateMoodChart();
         });
     }
-
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        document.getElementById("loginStatus").innerText = `👋 歡迎 ${user.displayName}`;
-        loadUserEntries(user.uid);
-      }
-    });
   </script>
 </body>
 </html>
