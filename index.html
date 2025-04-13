@@ -26,6 +26,8 @@
   <p>請選擇日期與輸入你今天的想法：</p>
   <input type="date" id="inputDate" />
   <textarea id="inputThought" placeholder="例如：我今天在報告時結巴了，覺得大家覺得我很差..."></textarea>
+  <button onclick="startVoiceInput()">🎙️ 使用語音輸入想法</button>
+  <p id="voiceStatus"></p>
   <label for="moodRange">今日心情溫度計（0-10）：</label>
   <input type="range" id="moodRange" min="0" max="10" step="1" value="5" oninput="document.getElementById('moodValueDisplay').innerText = `心情分數：${this.value}`">
   <div id="moodValueDisplay">心情分數：5</div>
@@ -51,7 +53,7 @@
       apiKey: "AIzaSyBxnh_QK6r-luS3yMOfEsv3LLZaW8GPrbU",
       authDomain: "cbt-thinking.firebaseapp.com",
       projectId: "cbt-thinking",
-      storageBucket: "cbt-thinking.appspot.com",
+      storageBucket: "cbt-thinking.firebasestorage.app",
       messagingSenderId: "637682778759",
       appId: "1:637682778759:web:9c2b2360ad88573766ae22",
       measurementId: "G-WGHQVYETPD"
@@ -61,182 +63,42 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    function loginWithGoogle() {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider)
-        .then((result) => {
-          const user = result.user;
-          document.getElementById("loginStatus").innerText = `👋 歡迎 ${user.displayName}`;
-          loadUserEntries(user.uid);
-        })
-        .catch((error) => {
-          console.error("登入失敗", error);
-          document.getElementById("loginStatus").innerText = "❌ 登入失敗";
-        });
-    }
+    // 語音輸入功能
+    window.startVoiceInput = function () {
+      const status = document.getElementById("voiceStatus");
+      const input = document.getElementById("inputThought");
 
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        document.getElementById("loginStatus").innerText = `👋 歡迎 ${user.displayName}`;
-        loadUserEntries(user.uid);
-      }
-    });
-
-    let allEntries = [];
-    let moodChart;
-
-    function analyzeThought() {
-      const date = document.getElementById("inputDate").value;
-      const thought = document.getElementById("inputThought").value;
-      const mood = document.getElementById("moodRange").value;
-      const outputDiv = document.getElementById("output");
-
-      let mockResult = `
-        <h2>分析結果</h2>
-        <p><strong>事件：</strong>你在報告時結巴了</p>
-        <p><strong>情緒：</strong>羞愧、不安</p>
-        <p><strong>自動化思考：</strong>大家一定覺得我很沒用</p>
-        <p><strong>認知謬誤：</strong>讀心術、災難化</p>
-        <p><strong>建議性的反思：</strong>即使我表現不完美，這也不代表我沒用，別人可能理解我只是緊張。</p>
-        <p><strong>替代性思考：</strong>我可以下次提前練習報告，讓自己更有信心，這次的經驗讓我知道要更準備。</p>
-      `;
-
-      const time = new Date().toLocaleTimeString();
-      const fullDate = date ? date : new Date().toLocaleDateString();
-      const fullTimestamp = `${fullDate} ${time}`;
-
-      outputDiv.innerHTML = mockResult;
-
-      const entry = { date: fullTimestamp, thought, mood: parseInt(mood), html: mockResult };
-      allEntries.push(entry);
-      displayHistory();
-      updateMoodChart();
-
-      document.getElementById("inputThought").value = "";
-
-      if (auth.currentUser) {
-        db.collection("entries").add({
-          uid: auth.currentUser.uid,
-          date: fullTimestamp,
-          thought: thought,
-          mood: parseInt(mood),
-          result: mockResult
-        });
-      }
-    }
-
-    function loadUserEntries(uid) {
-      db.collection("entries")
-        .where("uid", "==", uid)
-        .orderBy("date")
-        .get()
-        .then(snapshot => {
-          allEntries = snapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-              date: data.date,
-              thought: data.thought,
-              mood: data.mood,
-              html: data.result
-            };
-          });
-          displayHistory();
-          updateMoodChart();
-        });
-    }
-
-    function displayHistory() {
-      const container = document.getElementById("historyEntries");
-      container.innerHTML = "";
-      allEntries.forEach(entry => {
-        const div = document.createElement("div");
-        div.className = "entry";
-        div.innerHTML = `<p><strong>${entry.date}</strong></p>${entry.html}`;
-        container.appendChild(div);
-      });
-    }
-
-    function filterHistory() {
-      const searchTerm = document.getElementById("searchInput").value.toLowerCase();
-      const container = document.getElementById("historyEntries");
-      container.innerHTML = "";
-
-      allEntries
-        .filter(entry =>
-          entry.thought.toLowerCase().includes(searchTerm) ||
-          entry.html.toLowerCase().includes(searchTerm)
-        )
-        .forEach(entry => {
-          const div = document.createElement("div");
-          div.className = "entry";
-          div.innerHTML = `<p><strong>${entry.date}</strong></p>${entry.html}`;
-          container.appendChild(div);
-        });
-    }
-
-    function exportHistory() {
-      let content = "";
-      allEntries.forEach(entry => {
-        content += `【${entry.date}】\n想法：${entry.thought}\n心情分數：${entry.mood}\n\n`;
-      });
-
-      const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "cbt_歷史紀錄.txt";
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-
-    function exportExcel() {
-      let csvContent = "日期,想法,心情分數\n";
-      allEntries.forEach(entry => {
-        const row = `"${entry.date}","${entry.thought.replace(/"/g, '""')}","${entry.mood}"\n`;
-        csvContent += row;
-      });
-
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "cbt_歷史紀錄.csv";
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-
-    function updateMoodChart() {
-      const ctx = document.getElementById("moodChart").getContext("2d");
-      const labels = allEntries.map(entry => entry.date);
-      const data = allEntries.map(entry => entry.mood);
-
-      if (moodChart) {
-        moodChart.destroy();
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        status.innerText = "❌ 此瀏覽器不支援語音輸入功能。請改用 Chrome 或 Edge。";
+        return;
       }
 
-      moodChart = new Chart(ctx, {
-        type: "line",
-        data: {
-          labels: labels,
-          datasets: [{
-            label: "心情分數",
-            data: data,
-            fill: false,
-            borderColor: "#3e95cd",
-            tension: 0.1
-          }]
-        },
-        options: {
-          responsive: true,
-          scales: {
-            y: {
-              suggestedMin: 0,
-              suggestedMax: 10
-            }
-          }
+      const recognition = new SpeechRecognition();
+      recognition.lang = "zh-TW";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      status.innerText = "🎧 聆聽中...請開始說話";
+
+      recognition.onresult = function (event) {
+        const transcript = event.results[0][0].transcript;
+        input.value = transcript;
+        status.innerText = "✅ 已完成語音輸入！";
+      };
+
+      recognition.onerror = function (event) {
+        status.innerText = `⚠️ 語音辨識錯誤：${event.error}`;
+      };
+
+      recognition.onend = function () {
+        if (status.innerText === "🎧 聆聽中...請開始說話") {
+          status.innerText = "⚠️ 沒有收到語音，請再試一次。";
         }
-      });
-    }
+      };
+
+      recognition.start();
+    };
   </script>
 </body>
 </html>
