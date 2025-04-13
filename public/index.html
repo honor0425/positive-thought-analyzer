@@ -110,7 +110,7 @@
       output.innerText = "🤔 正在分析中...請稍候...";
 
       try {
-        const response = await fetch("https://cbt-analyzer.onrender.com", {
+        const response = await fetch("https://cbt-analyzer.onrender.com/analyzer", {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
