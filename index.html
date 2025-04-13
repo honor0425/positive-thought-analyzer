@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>自動化思考分析器</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
   <style>
     body { font-family: sans-serif; padding: 2em; background: #f0f4f8; }
     textarea, input[type="date"], input[type="text"], input[type="range"] { width: 100%; padding: 10px; font-size: 1em; margin-bottom: 1em; }
@@ -51,11 +51,10 @@
       apiKey: "AIzaSyBxnh_QK6r-luS3yMOfEsv3LLZaW8GPrbU",
       authDomain: "cbt-thinking.firebaseapp.com",
       projectId: "cbt-thinking",
-      storageBucket: "cbt-thinking.firebasestorage.app",  
+      storageBucket: "cbt-thinking.appspot.com",
       messagingSenderId: "637682778759",
-	  appId: "1:637682778759:web:9c2b2360ad88573766ae22",
-	  measurementId ： “G-WGHQVYETPD
-	  
+      appId: "1:637682778759:web:9c2b2360ad88573766ae22",
+      measurementId: "G-WGHQVYETPD"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -144,6 +143,99 @@
           displayHistory();
           updateMoodChart();
         });
+    }
+
+    function displayHistory() {
+      const container = document.getElementById("historyEntries");
+      container.innerHTML = "";
+      allEntries.forEach(entry => {
+        const div = document.createElement("div");
+        div.className = "entry";
+        div.innerHTML = `<p><strong>${entry.date}</strong></p>${entry.html}`;
+        container.appendChild(div);
+      });
+    }
+
+    function filterHistory() {
+      const searchTerm = document.getElementById("searchInput").value.toLowerCase();
+      const container = document.getElementById("historyEntries");
+      container.innerHTML = "";
+
+      allEntries
+        .filter(entry =>
+          entry.thought.toLowerCase().includes(searchTerm) ||
+          entry.html.toLowerCase().includes(searchTerm)
+        )
+        .forEach(entry => {
+          const div = document.createElement("div");
+          div.className = "entry";
+          div.innerHTML = `<p><strong>${entry.date}</strong></p>${entry.html}`;
+          container.appendChild(div);
+        });
+    }
+
+    function exportHistory() {
+      let content = "";
+      allEntries.forEach(entry => {
+        content += `【${entry.date}】\n想法：${entry.thought}\n心情分數：${entry.mood}\n\n`;
+      });
+
+      const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "cbt_歷史紀錄.txt";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportExcel() {
+      let csvContent = "日期,想法,心情分數\n";
+      allEntries.forEach(entry => {
+        const row = `"${entry.date}","${entry.thought.replace(/"/g, '""')}","${entry.mood}"\n`;
+        csvContent += row;
+      });
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "cbt_歷史紀錄.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function updateMoodChart() {
+      const ctx = document.getElementById("moodChart").getContext("2d");
+      const labels = allEntries.map(entry => entry.date);
+      const data = allEntries.map(entry => entry.mood);
+
+      if (moodChart) {
+        moodChart.destroy();
+      }
+
+      moodChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "心情分數",
+            data: data,
+            fill: false,
+            borderColor: "#3e95cd",
+            tension: 0.1
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              suggestedMin: 0,
+              suggestedMax: 10
+            }
+          }
+        }
+      });
     }
   </script>
 </body>
