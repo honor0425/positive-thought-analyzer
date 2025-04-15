@@ -29,7 +29,7 @@
   <textarea id="inputThought" placeholder="例如：我今天在報告時結巴了，覺得大家覺得我很差..."></textarea>
   <button onclick="startVoiceInput()">🎙️ 使用語音輸入想法</button>
   <p id="voiceStatus"></p>
-  <label for="moodRange">今日心情溫度計（0-10）：</label>
+  <label for="moodRange">今日心情溫度計（0-10），0是非常不開心，10是非常開心：</label>
   <input type="range" id="moodRange" min="0" max="10" step="1" value="5" oninput="document.getElementById('moodValueDisplay').innerText = `心情分數：${this.value}`">
   <div id="moodValueDisplay">心情分數：5</div>
   <button onclick="analyzeThought()">分析我的想法</button>
