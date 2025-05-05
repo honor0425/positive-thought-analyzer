@@ -1,7 +1,7 @@
 {
-  "name": "cbt-analyzer",
+  "name": "positive-thought-analyzer",
   "version": "1.0.0",
-  "description": "CBT 思考分析後端",
+  "description": "正向思考分析後端",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
