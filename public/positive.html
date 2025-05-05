@@ -105,6 +105,7 @@
             mood,
             date,
             analysis,
+            positive,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           });
           loadHistory();
@@ -120,6 +121,7 @@
 
       const snapshot = await db.collection("thoughts")
         .where("uid", "==", user.uid)
+        .where("type", "==", "positive")
         .orderBy("date", "desc")
         .get();
 
