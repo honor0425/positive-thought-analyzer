@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>自動化思考分析器</title>
+  <title>正向思考回應</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
@@ -21,7 +21,7 @@
   </style>
 </head>
 <body>
-  <h1>🧠 自動化思考分析器</h1>
+  <h1>🧠 正向思考回應</h1>
   <button onclick="loginWithGoogle()">🔐 使用 Google 登入</button>
   <div id="loginStatus"></div>
   <p>請選擇日期與輸入你今天的想法：</p>
@@ -32,7 +32,7 @@
   <label for="moodRange">今日心情溫度計（0-10），0是非常不開心，10是非常開心：</label>
   <input type="range" id="moodRange" min="0" max="10" step="1" value="5" oninput="document.getElementById('moodValueDisplay').innerText = `心情分數：${this.value}`">
   <div id="moodValueDisplay">心情分數：5</div>
-  <button onclick="analyzeThought()">分析我的想法</button>
+  <button onclick="analyzeThought()">正向回應我的想法</button>
   <button onclick="exportHistory()">📁 匯出文字紀錄</button>
   <button onclick="exportExcel()">📊 匯出 Excel</button>
 
@@ -52,9 +52,9 @@
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyBxnh_QK6r-luS3yMOfEsv3LLZaW8GPrbU",
-      authDomain: "cbt-thinking.firebaseapp.com",
-      projectId: "cbt-thinking",
-      storageBucket: "cbt-thinking.firebasestorage.app",
+      authDomain: "positive-thought-analyzer.firebaseapp.com",
+      projectId: "positive-thought-analyzer",
+      storageBucket: "positive-thought-analyzer.firebasestorage.app",
       messagingSenderId: "637682778759",
       appId: "1:637682778759:web:9c2b2360ad88573766ae22",
       measurementId: "G-WGHQVYETPD"
@@ -174,13 +174,13 @@
 
     function exportHistory() {
       const entries = document.querySelectorAll(".entry");
-      let text = "自動化思考分析歷史紀錄\n\n";
+      let text = "正向思考回應歷史紀錄\n\n";
       entries.forEach(entry => { text += entry.innerText + "\n\n"; });
       const blob = new Blob([text], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "CBT_歷史紀錄.txt";
+      a.download = "正向思考_歷史紀錄.txt";
       a.click();
     }
 
@@ -200,7 +200,7 @@
       const sheet = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, sheet, "思考紀錄");
-      XLSX.writeFile(wb, "CBT_歷史紀錄.xlsx");
+      XLSX.writeFile(wb, "正向思考_歷史紀錄.xlsx");
     }
 
     function startVoiceInput() {
