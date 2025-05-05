@@ -13,6 +13,9 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 app.post("/analyze", async (req, res) => {
   const { thought } = req.body;
 
