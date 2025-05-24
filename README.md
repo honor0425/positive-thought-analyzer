@@ -1,1 +1,1 @@
-# cbt-analyzer
+# POSITIVE THOUGHT ANALYZER
